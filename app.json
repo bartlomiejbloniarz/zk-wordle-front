@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "zk-wordle",
+    "slug": "zk-wordle",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "experiments": {
+      "baseUrl": "/zk-wordle"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    }
+  }
+}
