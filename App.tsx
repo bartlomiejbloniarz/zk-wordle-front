@@ -208,13 +208,19 @@ export default function App() {
     setIsInvalidGuess(false);
   };
 
+  const cmt = commitment?.commitment ?? "";
+
   return (
     <View style={styles.container}>
       <TopBar onReset={onReset} />
-      <Text style={styles.hash}>
-        Current hash: {commitment?.commitment}
-        {isMembershipVerified ? " ✅" : " ⏱️"}
-      </Text>
+      <View style={{ flexDirection: "row", flexShrink: 1 }}>
+        <Text style={styles.hash}>
+          Current hash: {cmt.slice(0, Math.floor(cmt.length / 2))}
+          {"\n"}
+          {cmt.slice(Math.floor(cmt.length / 2), cmt.length)}
+          {isMembershipVerified ? " ✅" : " ⏱️"}
+        </Text>
+      </View>
       {isInvalid && (
         <Text style={styles.redText}>{"The server is lying to you :(("}</Text>
       )}
@@ -240,6 +246,7 @@ export default function App() {
         )}
       </View>
       <Keyboard
+        isLoading={commitment === null || isInvalid || finished || isLoading}
         greenLetters={greenLetters.current}
         yellowLetters={yellowLetters.current}
         darkGreyLetters={darkGreyLetters.current}
@@ -288,6 +295,8 @@ const styles = StyleSheet.create({
   hash: {
     color: "white",
     fontSize: 10,
+    flexShrink: 1,
+    textAlign: "center",
   },
   redText: {
     color: "red",

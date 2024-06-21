@@ -9,7 +9,7 @@
       "supportsTablet": true
     },
     "experiments": {
-      "baseUrl": "/zk-wordle"
+      "baseUrl": "/zk-wordle-front"
     },
     "android": {
       "adaptiveIcon": {
