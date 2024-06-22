@@ -29,14 +29,17 @@ export function BigKey({
   }, [isLoading]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    console.log(char, sv.value);
     return {
       backgroundColor: sv.value,
     };
   });
 
   return (
-    <Animated.Text onPress={onPress} style={[styles.bigKey, animatedStyle]}>
+    <Animated.Text
+      selectable={false}
+      onPress={onPress}
+      style={[styles.bigKey, animatedStyle]}
+    >
       {char}
     </Animated.Text>
   );
@@ -68,6 +71,7 @@ export function Keyboard({
           )}
           {row.map((char, j) => (
             <Text
+              selectable={false}
               onPress={() => onPress(char)}
               key={j}
               style={[

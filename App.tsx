@@ -7,12 +7,12 @@ import Animated, {
   FlipInEasyX,
   LayoutAnimationConfig,
   LinearTransition,
+  SlideInUp,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { TopBar } from "./src/TopBar";
 import { Color, type Commitment, type Guess } from "./src/types";
 import {
   getClue,
@@ -88,6 +88,7 @@ function InputRow({
     <Animated.View
       key={"input"}
       layout={LinearTransition}
+      entering={FadeInUp}
       style={[styles.row, animatedStyle]}
     >
       {trimmedText.split("").map((char, i) => (
@@ -125,10 +126,11 @@ export default function App() {
   const yellowLetters = useRef(new Set<string>());
   const darkGreyLetters = useRef(new Set<string>());
   const [commitment, setCommitment] = useState<Commitment | null>(null);
-  const [isInvalid, setIsInvalid] = useState<boolean>(false);
+  const [isInvalidProof, setIsInvalidProof] = useState<boolean>(false);
   const [isMembershipVerified, setIsMembershipVerified] =
     useState<boolean>(false);
   const [isInvalidGuess, setIsInvalidGuess] = useState<boolean>(false);
+  const [isCommitmentOld, setIsCommitmentOld] = useState<boolean>(false);
 
   useEffect(() => {
     getCommitment().then(setCommitment);
@@ -138,7 +140,7 @@ export default function App() {
     if (commitment) {
       verifyCommitment(commitment).then((valid) => {
         if (!valid) {
-          setIsInvalid(true);
+          setIsInvalidProof(true);
         } else {
           setIsMembershipVerified(true);
         }
@@ -170,27 +172,31 @@ export default function App() {
     setText((prev) => (prev.length < 5 ? prev + char : prev));
   };
 
-  const onReset = () => {
-    if (isLoading) return;
-    setIsInvalidGuess(false);
-    setGuesses([]);
-    setText("");
-    greenLetters.current.clear();
-    yellowLetters.current.clear();
-    darkGreyLetters.current.clear();
-  };
-
   const onSubmit = () => {
+    if (isInvalidProof) {
+      return;
+    }
     if (text.length === 5 && commitment !== null) {
       if (!validGuesses.has(text.toLowerCase())) {
         setIsInvalidGuess(true);
         return;
       }
       setIsLoading(true);
-      getClue(text).then((clue) => {
+      getClue(text, commitment.word_id).then((response) => {
+        if (response.type === "error") {
+          if (response.error === "word does not exist") {
+            setIsInvalidGuess(true);
+          } else {
+            setIsCommitmentOld(true);
+          }
+          setIsLoading(false);
+          return;
+        }
+        const clue = response.value;
+
         verifyClue(text, clue, commitment.commitment).then((valid) => {
           if (!valid) {
-            setIsInvalid(true);
+            setIsInvalidProof(true);
             return;
           }
           setGuesses([...guesses, { word: text, colors: clue.colors }]);
@@ -203,7 +209,7 @@ export default function App() {
   };
 
   const onBack = () => {
-    if (isLoading) return;
+    if (isLoading || isInvalidProof) return;
     setText((prev) => prev.slice(0, prev.length - 1));
     setIsInvalidGuess(false);
   };
@@ -212,8 +218,7 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <TopBar onReset={onReset} />
-      <View style={{ flexDirection: "row", flexShrink: 1 }}>
+      <View style={{ flexDirection: "row", flexShrink: 1, marginBottom: 10 }}>
         <Text style={styles.hash}>
           Current hash: {cmt.slice(0, Math.floor(cmt.length / 2))}
           {"\n"}
@@ -221,8 +226,20 @@ export default function App() {
           {isMembershipVerified ? " ✅" : " ⏱️"}
         </Text>
       </View>
-      {isInvalid && (
-        <Text style={styles.redText}>{"The server is lying to you :(("}</Text>
+      {isCommitmentOld && (
+        <Animated.View entering={FadeIn} style={{ marginBottom: 10 }}>
+          <Text style={styles.errorText}>{"The commitment is old."}</Text>
+          <Text style={styles.errorText}>{"There is a new word."}</Text>
+          <Text style={styles.errorText}>{"Please refresh the page."}</Text>
+        </Animated.View>
+      )}
+      {isInvalidProof && (
+        <Animated.Text
+          entering={FadeIn}
+          style={[styles.errorText, { marginBottom: 10 }]}
+        >
+          {"The server is lying to you :("}
+        </Animated.Text>
       )}
       {finished && (
         <ResultView
@@ -231,7 +248,7 @@ export default function App() {
           )}
         />
       )}
-      <View style={{ padding: 40 }}>
+      <View>
         {guesses.map((guess, i) => (
           <Row key={i} word={guess.word} colors={guess.colors} />
         ))}
@@ -240,13 +257,15 @@ export default function App() {
             key={guesses.length}
             text={text}
             isLoading={isLoading}
-            isInvalid={isInvalid}
+            isInvalid={isInvalidProof}
             isInvalidGuess={isInvalidGuess}
           />
         )}
       </View>
       <Keyboard
-        isLoading={commitment === null || isInvalid || finished || isLoading}
+        isLoading={
+          commitment === null || isInvalidProof || finished || isLoading
+        }
         greenLetters={greenLetters.current}
         yellowLetters={yellowLetters.current}
         darkGreyLetters={darkGreyLetters.current}
@@ -298,8 +317,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "center",
   },
-  redText: {
-    color: "red",
-    fontSize: 50,
+  errorText: {
+    color: "#FF2222",
+    fontSize: 30,
+    alignSelf: "center",
   },
 });
